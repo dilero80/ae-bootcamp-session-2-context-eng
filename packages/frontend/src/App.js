@@ -202,13 +202,15 @@ function App() {
                 inputProps={{ maxLength: 200 }}
               />
               <TextField
-                label="Due date"
+                id="new-task-due-date"
                 type="date"
                 value={dueDate}
                 onChange={event => setDueDate(event.target.value)}
-                InputLabelProps={{ shrink: true }}
                 fullWidth
               />
+              <label className="visually-hidden" htmlFor="new-task-due-date">
+                Due date
+              </label>
               <Button type="submit" variant="contained">
                 Add task
               </Button>
@@ -300,13 +302,15 @@ function App() {
                   inputProps={{ maxLength: 200 }}
                 />
                 <TextField
-                  label="Due date"
+                  id="edit-task-due-date"
                   type="date"
                   value={editDueDate}
                   onChange={event => setEditDueDate(event.target.value)}
-                  InputLabelProps={{ shrink: true }}
                   fullWidth
                 />
+                <label className="visually-hidden" htmlFor="edit-task-due-date">
+                  Due date
+                </label>
               </Stack>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
