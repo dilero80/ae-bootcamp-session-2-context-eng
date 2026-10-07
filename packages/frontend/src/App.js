@@ -1,37 +1,90 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  CssBaseline,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  Paper,
+  Stack,
+  TextField,
+  ThemeProvider,
+  Typography,
+} from '@mui/material';
+import { createTheme } from '@mui/material/styles';
 import './App.css';
 
+const theme = createTheme({
+  palette: {
+    primary: { main: '#b71c1c', dark: '#8e0000', contrastText: '#ffffff' },
+    error: { main: '#b71c1c' },
+    background: { default: '#f7f7f7', paper: '#ffffff' },
+    text: { primary: '#202124', secondary: '#555b62' },
+  },
+  shape: { borderRadius: 6 },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: { minHeight: 44, borderRadius: 6, textTransform: 'none', fontWeight: 600 },
+      },
+    },
+  },
+});
+
+const formatDueDate = (value) => {
+  if (!value) {
+    return 'No due date';
+  }
+
+  const [year, month, day] = value.split('-').map(Number);
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+};
+
 function App() {
-  const [data, setData] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [newItem, setNewItem] = useState('');
+  const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [taskName, setTaskName] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [editingItem, setEditingItem] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const loadItems = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await fetch('/api/items');
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error('Unable to load tasks');
       }
-      const result = await response.json();
-      setData(result);
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch data: ' + err.message);
-      console.error('Error fetching data:', err);
+      setItems(await response.json());
+      setError('');
+    } catch (loadError) {
+      setError('Could not load tasks. Please try again.');
+      console.error('Error loading tasks:', loadError);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!newItem.trim()) return;
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  const handleCreate = async (event) => {
+    event.preventDefault();
+    if (!taskName.trim()) return;
 
     try {
       const response = await fetch('/api/items', {
@@ -39,19 +92,61 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: newItem }),
+        body: JSON.stringify({ name: taskName.trim(), due_date: dueDate || null }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add item');
+        throw new Error('Unable to add task');
       }
 
-      const result = await response.json();
-      setData([...data, result]);
-      setNewItem('');
-    } catch (err) {
-      setError('Error adding item: ' + err.message);
-      console.error('Error adding item:', err);
+      setTaskName('');
+      setDueDate('');
+      setError('');
+      await loadItems();
+      setStatus('Task added');
+    } catch (createError) {
+      setError('Could not add task. Please try again.');
+      console.error('Error adding task:', createError);
+    }
+  };
+
+  const openEditDialog = (item) => {
+    setEditingItem(item);
+    setEditName(item.name);
+    setEditDueDate(item.due_date || '');
+    setError('');
+    setStatus('');
+  };
+
+  const closeEditDialog = () => {
+    setEditingItem(null);
+  };
+
+  const handleUpdate = async (event) => {
+    event.preventDefault();
+    if (!editingItem || !editName.trim()) return;
+
+    try {
+      const response = await fetch(`/api/items/${editingItem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName.trim(),
+          due_date: editDueDate || null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to update task');
+      }
+
+      closeEditDialog();
+      setError('');
+      await loadItems();
+      setStatus('Task updated');
+    } catch (updateError) {
+      setError('Could not update task. Please try again.');
+      console.error('Error updating task:', updateError);
     }
   };
 
@@ -62,65 +157,170 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete item');
+        throw new Error('Unable to delete task');
       }
 
-      setData(data.filter(item => item.id !== itemId));
-      setError(null);
-    } catch (err) {
-      setError('Error deleting item: ' + err.message);
-      console.error('Error deleting item:', err);
+      setItems(currentItems => currentItems.filter(item => item.id !== itemId));
+      setError('');
+      setStatus('Task deleted');
+    } catch (deleteError) {
+      setError('Could not delete task. Please try again.');
+      console.error('Error deleting task:', deleteError);
     }
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>To Do App</h1>
-        <p>Keep track of your tasks</p>
-      </header>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box className="app-shell">
+        <Box component="main" className="app-content">
+          <Box component="header" sx={{ mb: 4 }}>
+            <Typography component="h1" variant="h4" fontWeight={700}>
+              Tasks
+            </Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+              Keep track of what needs to get done.
+            </Typography>
+          </Box>
 
-      <main>
-        <section className="add-item-section">
-          <h2>Add New Item</h2>
-          <form onSubmit={handleSubmit}>
-            <input
-              type="text"
-              value={newItem}
-              onChange={(e) => setNewItem(e.target.value)}
-              placeholder="Enter item name"
-            />
-            <button type="submit">Add Item</button>
-          </form>
-        </section>
+          <Paper component="section" variant="outlined" className="task-panel">
+            <Typography component="h2" variant="h6" id="add-task-heading" fontWeight={600}>
+              Add a task
+            </Typography>
+            <Box
+              component="form"
+              aria-labelledby="add-task-heading"
+              onSubmit={handleCreate}
+              className="task-form"
+            >
+              <TextField
+                label="Task name"
+                value={taskName}
+                onChange={event => setTaskName(event.target.value)}
+                required
+                fullWidth
+                inputProps={{ maxLength: 200 }}
+              />
+              <TextField
+                label="Due date"
+                type="date"
+                value={dueDate}
+                onChange={event => setDueDate(event.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+              <Button type="submit" variant="contained">
+                Add task
+              </Button>
+            </Box>
 
-        <section className="items-section">
-          <h2>Items from Database</h2>
-          {loading && <p>Loading data...</p>}
-          {error && <p className="error">{error}</p>}
-          {!loading && !error && (
-            <ul>
-              {data.length > 0 ? (
-                data.map((item) => (
-                  <li key={item.id}>
-                    <span>{item.name}</span>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="delete-btn"
-                      type="button"
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))
-              ) : (
-                <p>No items found. Add some!</p>
-              )}
-            </ul>
-          )}
-        </section>
-      </main>
-    </div>
+            {error && <Alert severity="error" role="alert" sx={{ mt: 2 }}>{error}</Alert>}
+            <Typography className="status-message" role="status" aria-live="polite">
+              {status}
+            </Typography>
+
+            <Divider sx={{ my: 2.5 }} />
+
+            <Typography
+              component="h2"
+              variant="h6"
+              id="task-list-heading"
+              fontWeight={600}
+              sx={{ mb: 1 }}
+            >
+              Your tasks
+            </Typography>
+
+            {loading ? (
+              <Box className="loading-state" role="status" aria-label="Loading tasks">
+                <CircularProgress size={24} />
+                <Typography color="text.secondary">Loading tasks</Typography>
+              </Box>
+            ) : error ? null : items.length === 0 ? (
+              <Typography color="text.secondary" sx={{ py: 2 }}>
+                No tasks yet. Add one above.
+              </Typography>
+            ) : (
+              <List aria-labelledby="task-list-heading" disablePadding>
+                {items.map(item => (
+                  <ListItem
+                    key={item.id}
+                    divider
+                    className="task-list-item"
+                    secondaryAction={(
+                      <Stack direction="row" spacing={0.5}>
+                        <Button
+                          type="button"
+                          onClick={() => openEditDialog(item)}
+                          aria-label={`Edit ${item.name}`}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          color="error"
+                          onClick={() => handleDelete(item.id)}
+                          aria-label={`Delete ${item.name}`}
+                        >
+                          Delete
+                        </Button>
+                      </Stack>
+                    )}
+                  >
+                    <ListItemText
+                      primary={item.name}
+                      secondary={formatDueDate(item.due_date)}
+                      primaryTypographyProps={{ fontWeight: 500 }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Paper>
+        </Box>
+
+        <Dialog
+          open={Boolean(editingItem)}
+          onClose={closeEditDialog}
+          aria-labelledby="edit-task-title"
+          fullWidth
+          maxWidth="xs"
+        >
+          <Box component="form" onSubmit={handleUpdate}>
+            <DialogTitle id="edit-task-title">Edit task</DialogTitle>
+            <DialogContent>
+              <Stack spacing={2} sx={{ pt: 1 }}>
+                <TextField
+                  label="Task name"
+                  value={editName}
+                  onChange={event => setEditName(event.target.value)}
+                  required
+                  fullWidth
+                  autoFocus
+                  inputProps={{ maxLength: 200 }}
+                />
+                <TextField
+                  label="Due date"
+                  type="date"
+                  value={editDueDate}
+                  onChange={event => setEditDueDate(event.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Stack>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button type="button" onClick={closeEditDialog}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="contained">
+                Save changes
+              </Button>
+            </DialogActions>
+          </Box>
+        </Dialog>
+      </Box>
+    </ThemeProvider>
   );
 }
 

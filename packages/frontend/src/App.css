@@ -1,94 +1,64 @@
-.App {
-  text-align: center;
-  max-width: 800px;
+.app-shell {
+  min-height: 100vh;
+  background: #f7f7f7;
+}
+
+.app-content {
+  width: min(100% - 32px, 760px);
   margin: 0 auto;
-  padding: 20px;
+  padding: 48px 0;
 }
 
-.App-header {
-  background-color: #282c34;
-  padding: 20px;
-  color: white;
-  border-radius: 8px;
-  margin-bottom: 20px;
+.task-panel {
+  padding: 24px;
+  border-radius: 6px;
 }
 
-.App-header h1 {
-  margin: 0;
-  font-size: 1.8rem;
-}
-
-main {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-section {
-  background-color: #f5f5f5;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.add-item-section form {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-input {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-button {
-  padding: 8px 16px;
-  background-color: #61dafb;
-  color: #282c34;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-button:hover {
-  background-color: #21a1c9;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
+.task-form {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) auto;
   align-items: center;
+  gap: 12px;
+  margin-top: 20px;
 }
 
-li:last-child {
-  border-bottom: none;
+.task-list-item.MuiListItem-root {
+  min-height: 72px;
+  padding-right: 190px;
 }
 
-.delete-btn {
-  background-color: #f44336;
-  color: white;
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  margin-left: 10px;
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
 }
 
-.delete-btn:hover {
-  background-color: #d32f2f;
+.status-message {
+  min-height: 24px;
+  margin-top: 8px;
+  color: #202124;
 }
 
-.error {
-  color: #d32f2f;
-  font-weight: bold;
+:focus-visible {
+  outline: 3px solid #8e0000;
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .app-content {
+    padding: 32px 0;
+  }
+
+  .task-panel {
+    padding: 18px;
+  }
+
+  .task-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .task-list-item.MuiListItem-root {
+    padding-right: 164px;
+  }
 }
